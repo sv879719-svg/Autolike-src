@@ -1,0 +1,5 @@
+{
+  "name": "AutoLike Telegram Bot",
+  "description": "A Telegram bot for game likes with VIP and Auto-User features.",
+  "requestFramePermissions": []
+}

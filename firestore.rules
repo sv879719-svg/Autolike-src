@@ -1,0 +1,82 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: tgId (string)
+// Fields:
+//   - tgId: string (required) - Telegram User ID
+//   - name: string (optional) - Telegram Name
+//   - role: string (required) - ['normal', 'vip', 'autouser', 'admin']
+//   - uid: string (optional) - Game UID
+//   - expiryDate: string (optional) - ISO 8601 date string
+//   - lastLikeDate: string (optional) - ISO 8601 date string
+//
+// Collection: config
+// Document ID: main
+// Fields:
+//   - apiUrl: string - Like API URL template
+//   - adminTgId: string - Main admin Telegram ID
+//   - channelId: string - Logs channel ID
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         request.auth.token.email == "sv879719@gmail.com");
+    }
+
+    function isOwner(tgId) {
+      return isAuthenticated() && (request.auth.uid == tgId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tgId == tgId);
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['tgId', 'role']) &&
+             data.tgId is string &&
+             data.role in ['normal', 'vip', 'autouser', 'admin'] &&
+             (!('name' in data) || data.name is string) &&
+             (!('uid' in data) || data.uid is string) &&
+             (!('expiryDate' in data) || data.expiryDate is string) &&
+             (!('lastLikeDate' in data) || data.lastLikeDate is string);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{tgId} {
+      allow read: if true; // Allow bot to read user data
+      allow create: if true; // Bot can create users
+      allow update: if true; // Bot can update users
+      allow delete: if isAdmin();
+    }
+
+    match /redeemCodes/{code} {
+      allow read, write: if true; // Bot can manage redeem codes
+    }
+
+    match /config/main {
+      allow read: if true; // Bot needs to read config
+      allow write: if true; // Allow bot (server) to update config
+    }
+
+    match /logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if true; // Bot (server) can create logs
+      allow update, delete: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "LikexAdmin Bot Dashboard",
+  "short_name": "LikexAdmin",
+  "description": "Management dashboard for AutoLike Telegram Bot",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/bot/192/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://picsum.photos/seed/bot/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
