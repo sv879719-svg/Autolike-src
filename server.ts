@@ -17,16 +17,7 @@ function getApiUrl() {
   return 'https://like-ind-api004.vercel.app/like'; // Default
 }
 
-// Admin command to update API URL
-bot2.command('setapi', (ctx) => {
-  if (ctx.from?.id !== ADMIN_ID) return ctx.reply('❌ Access Denied.');
-  const newUrl = ctx.message.text.split(' ')[1];
-  if (!newUrl) return ctx.reply('Usage: /setapi <NEW_URL>');
-  
-  const config = { api_url: newUrl };
-  fs.writeFileSync(path.join(process.cwd(), 'config.json'), JSON.stringify(config, null, 2));
-  ctx.reply(`✅ API URL updated permanently to:\n${newUrl}`);
-});
+// Admin command to update API URL (will be moved after initialization)
 import { 
   getFirestore, 
   doc, 
@@ -63,6 +54,17 @@ const CHANNEL_ID = '-1003505605439';
 // New Bot Token
 const BOT_TOKEN_2 = '8678990817:AAHA31B1Zug6bGnoXUAIcH-rCgWNNOL_3pk';
 const bot2 = new Telegraf(BOT_TOKEN_2);
+
+// Admin command to update API URL
+bot2.command('setapi', (ctx) => {
+  if (ctx.from?.id !== ADMIN_ID) return ctx.reply('❌ Access Denied.');
+  const newUrl = ctx.message.text.split(' ')[1];
+  if (!newUrl) return ctx.reply('Usage: /setapi <NEW_URL>');
+  
+  const config = { api_url: newUrl };
+  fs.writeFileSync(path.join(process.cwd(), 'config.json'), JSON.stringify(config, null, 2));
+  ctx.reply(`✅ API URL updated permanently to:\n${newUrl}`);
+});
 
 // New Bot Logic (Elite)
 bot2.command('like', async (ctx) => {
