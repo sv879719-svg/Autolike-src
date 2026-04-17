@@ -43,7 +43,6 @@ import {
   arrayUnion
 } from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
-import fs from 'fs';
 
 dotenv.config();
 
