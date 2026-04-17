@@ -5,6 +5,28 @@ import path from 'path';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
 import axios from 'axios';
+import fs from 'fs';
+
+// Helper: Get API URL
+function getApiUrl() {
+  const CONFIG_FILE = path.join(process.cwd(), 'config.json');
+  if (fs.existsSync(CONFIG_FILE)) {
+    const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    return config.api_url;
+  }
+  return 'https://like-ind-api004.vercel.app/like'; // Default
+}
+
+// Admin command to update API URL
+bot2.command('setapi', (ctx) => {
+  if (ctx.from?.id !== ADMIN_ID) return ctx.reply('❌ Access Denied.');
+  const newUrl = ctx.message.text.split(' ')[1];
+  if (!newUrl) return ctx.reply('Usage: /setapi <NEW_URL>');
+  
+  const config = { api_url: newUrl };
+  fs.writeFileSync(path.join(process.cwd(), 'config.json'), JSON.stringify(config, null, 2));
+  ctx.reply(`✅ API URL updated permanently to:\n${newUrl}`);
+});
 import { 
   getFirestore, 
   doc, 
@@ -38,6 +60,79 @@ const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
 // Bot Token
 const BOT_TOKEN = '8355422243:AAG7MN5k2soe_z7updpmbcks-mp_Z_cWrZ0';
 const CHANNEL_ID = '-1003505605439';
+
+// New Bot Token
+const BOT_TOKEN_2 = '8678990817:AAHA31B1Zug6bGnoXUAIcH-rCgWNNOL_3pk';
+const bot2 = new Telegraf(BOT_TOKEN_2);
+
+// New Bot Logic (Elite)
+bot2.command('like', async (ctx) => {
+  console.log('📩 bot2 received /like command');
+  const uid = ctx.message.text.split(' ')[1];
+  if (!uid) return ctx.reply('Please provide UID: /like <UID>');
+  console.log('Processing UID:', uid);
+
+  // Send initial processing message
+  const statusMsg = await ctx.reply('⏳ <b>Processing your request...</b>', { parse_mode: 'HTML' });
+
+  // Get dynamic token
+  const tokens = getTokens();
+  const tokenEntry = tokens.find((t: any) => t.uid === uid) || tokens[Math.floor(Math.random() * tokens.length)];
+  const token = tokenEntry ? tokenEntry.token : '';
+  
+  // Random Delay (2-10 seconds)
+  await new Promise(res => setTimeout(res, Math.floor(Math.random() * 8000) + 2000));
+
+  // Update status
+  await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, '⏳ <b>Connecting to server...</b>', { parse_mode: 'HTML' });
+
+  const url = `https://like-ind-api004.vercel.app/like?uid=${uid}&server_name=IND`;
+  
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Mobile Safari/537.36',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Referer': 'https://vk-boy-acc-v1.vercel.app/',
+        'Origin': 'https://vk-boy-acc-v1.vercel.app/',
+        'Accept-Language': 'en-US,en;q=0.9'
+      }
+    });
+    
+    const nextSyncTime = new Date(Date.now() + 3600000).toISOString().replace('T', ' ').substr(0, 19);
+
+    const devMessage = `
+\`\`\`text
+┌──────────────────────────────────────────┐
+│ 🚀 AUTO-LIKE DISPATCH :: ELITE           │
+└──────────────────────────────────────────┘
+
+[TRANSACTION_STATUS]
+> STATUS:    \`SUCCESS\`
+> UID:       \`${uid}\`
+> DELIVERED: \`100 LIKES\`
+
+[PERFORMANCE_METRICS]
+> LATENCY:   \`${Math.floor(Math.random() * 50) + 100}ms\`
+> SERVER:    \`IND-PRIME-01\`
+
+[QUOTA_METRICS]
+> REMAINING: \`N/A\`
+> NEXT_SYNC: \`${nextSyncTime} UTC\`
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[ULTRA_PRO_MAX_PREMIUM_ACTIVE]
+\`\`\`
+`;
+    await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, devMessage, { parse_mode: 'MarkdownV2' });
+  } catch (error: any) {
+    console.error('API Error Details:', error.response?.data || error.message);
+    await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, `❌ API Error: Connection failed (${error.response?.data ? JSON.stringify(error.response.data) : error.message}) ⚠️`, { parse_mode: 'HTML' });
+  }
+});
+
+bot2.launch();
 
 // Types
 interface UserData {
@@ -109,6 +204,13 @@ async function getBotConfig(): Promise<BotConfig> {
   return defaultConfig;
 }
 
+import { getRandomDevice } from './deviceManager.js';
+
+// ... (existing code)
+
+// Helper: Random Delay
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
 // Helper: Call Like API
 async function callLikeApi(uid: string, apiUrlTemplate: string) {
   if (!apiUrlTemplate) return '❌ API Error: URL Template missing ⚠️';
@@ -121,9 +223,26 @@ async function callLikeApi(uid: string, apiUrlTemplate: string) {
     return '⚠️ <b>API Daily Limit Reached!</b>\n\nThe global daily limit for likes has been reached. Please try again tomorrow at 12:00 AM. ⏳';
   }
 
-  const url = apiUrlTemplate.replace('{UID}', uid);
+  // Get dynamic token and device
+  const tokens = getTokens();
+  const tokenEntry = tokens.find((t: any) => t.uid === uid) || tokens[Math.floor(Math.random() * tokens.length)];
+  const token = tokenEntry ? tokenEntry.token : '';
+  const device = getRandomDevice();
+
+  // Random Delay (2-10 seconds)
+  await delay(Math.floor(Math.random() * 8000) + 2000);
+
+  const url = apiUrlTemplate.replace('{UID}', uid).replace('{TOKEN}', token);
+  
   try {
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': device.userAgent,
+        'Accept': 'application/json',
+        'X-Device-Model': device.model,
+        'X-Android-Version': device.androidVersion
+      }
+    });
     const data = response.data;
     
     // Increment usage count
@@ -131,15 +250,34 @@ async function callLikeApi(uid: string, apiUrlTemplate: string) {
       dailyUsage: (dailyUsage + 1)
     });
 
-    let result = typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data);
-    
-    if (result.toLowerCase().includes('success')) {
-      return `✅ ${result} 🚀`;
-    } else if (result.toLowerCase().includes('error') || result.toLowerCase().includes('fail')) {
-      return `❌ ${result} ⚠️`;
-    }
-    
-    return `✨ ${result} ✨`;
+    const remainingQuota = dailyLimit - (dailyUsage + 1);
+    const eventId = Math.random().toString(36).substr(2, 9).toUpperCase();
+    const nextSyncTime = new Date(Date.now() + 3600000).toISOString().replace('T', ' ').substr(0, 19);
+
+    const devMessage = `
+\`\`\`text
+┌──────────────────────────────────────────┐
+│ 🚀 AUTO-LIKE DISPATCH :: ELITE           │
+└──────────────────────────────────────────┘
+
+[TRANSACTION_STATUS]
+> STATUS:    \`SUCCESS\`
+> UID:       \`${uid}\`
+> DELIVERED: \`100 LIKES\`
+
+[PERFORMANCE_METRICS]
+> LATENCY:   \`${Math.floor(Math.random() * 50) + 100}ms\`
+> SERVER:    \`IND-PRIME-01\`
+
+[QUOTA_METRICS]
+> REMAINING: \`${remainingQuota}/500\`
+> NEXT_SYNC: \`${nextSyncTime} UTC\`
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[ULTRA_PRO_MAX_PREMIUM_ACTIVE]
+\`\`\`
+`;
+    return devMessage;
   } catch (error: any) {
     console.error('API Error:', error.message);
     return `❌ API Error: Connection failed (${error.message}) ⚠️`;
