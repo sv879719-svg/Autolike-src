@@ -1739,15 +1739,21 @@ async function startServer() {
         console.error('❌ Bot identity check failed:', err.message);
       });
 
-      // Bot launch sequence (Non-blocking)
-      bot.telegram.deleteWebhook({ drop_pending_updates: true }).catch(() => {});
-      bot.launch({
-        allowedUpdates: ['message', 'callback_query'],
-      })
-        .then(() => console.log('✅ Bot launch sequence completed!'))
-        .catch((err) => {
-          console.error('❌ Failed to launch bot:', err.message);
-          if (err.message.includes('404')) {
+      // Bot launch sequence (Webhook mode)
+      const WEBHOOK_URL = process.env.WEBHOOK_URL; // Render URL!
+      if (WEBHOOK_URL) {
+        bot.telegram.setWebhook(`${WEBHOOK_URL}/bot${BOT_TOKEN}`);
+        app.use(bot.webhookCallback(`/bot${BOT_TOKEN}`));
+        console.log('✅ Bot running in Webhook mode!');
+      } else {
+        // Fallback to polling but with strong drop_pending_updates
+        bot.telegram.deleteWebhook({ drop_pending_updates: true }).then(() => {
+          bot.launch({
+            allowedUpdates: ['message', 'callback_query'],
+          });
+          console.log('✅ Bot running in Polling mode!');
+        });
+      }
             console.error('👉 This usually means your TELEGRAM_BOT_TOKEN is invalid or the bot was deleted.');
           }
         });
