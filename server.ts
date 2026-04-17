@@ -87,7 +87,7 @@ bot2.command('like', async (ctx) => {
   // Update status
   await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, '⏳ <b>Connecting to server...</b>', { parse_mode: 'HTML' });
 
-  const url = `https://like-ind-api004.vercel.app/like?uid=${uid}&server_name=IND`;
+  const url = getApiUrl(uid);
   
   try {
     const response = await axios.get(url, {

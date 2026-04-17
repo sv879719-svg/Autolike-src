@@ -113,6 +113,8 @@ export default function App() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [config, setConfig] = useState<BotConfig>({ apiUrl: '', adminTgId: '' });
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [password, setPassword] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -162,7 +164,7 @@ export default function App() {
     );
   }
 
-  if (!user) {
+  if (!user && !isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
         <motion.div 
@@ -170,17 +172,22 @@ export default function App() {
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl"
         >
-          <div className="inline-flex items-center justify-center p-4 bg-indigo-500/10 rounded-2xl mb-6 border border-indigo-500/20">
-            <Bot className="w-12 h-12 text-indigo-400" />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Bot Dashboard</h1>
-          <p className="text-slate-400 mb-8">Manage your AutoLike bot, users, and configurations in one place.</p>
+          <h1 className="text-2xl font-bold text-white mb-6">Enter Password</h1>
+          <input 
+            type="password" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl mb-4 text-white text-center text-lg"
+            placeholder="Password"
+          />
           <button 
-            onClick={signIn}
-            className="w-full py-4 bg-white text-slate-950 font-bold rounded-xl hover:bg-slate-200 transition-all flex items-center justify-center gap-3 shadow-lg shadow-white/5"
+            onClick={() => {
+              if (password === '2244') setIsAuthenticated(true);
+              else alert('❌ Wrong Password');
+            }}
+            className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500"
           >
-            <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google" />
-            Sign in with Google
+            Login
           </button>
         </motion.div>
       </div>
