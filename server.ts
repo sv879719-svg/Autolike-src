@@ -1740,7 +1740,7 @@ async function startServer() {
       });
 
       // Bot launch sequence (Non-blocking)
-      bot.telegram.deleteWebhook().catch(() => {});
+      bot.telegram.deleteWebhook({ drop_pending_updates: true }).catch(() => {});
       bot.launch({
         allowedUpdates: ['message', 'callback_query'],
       })
