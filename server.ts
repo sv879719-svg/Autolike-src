@@ -1752,13 +1752,16 @@ async function startServer() {
             allowedUpdates: ['message', 'callback_query'],
           });
           console.log('✅ Bot running in Polling mode!');
-        });
-      }
+        }).catch((err) => {
+          console.error('❌ Failed to launch bot:', err.message);
+          if (err.message.includes('404')) {
             console.error('👉 This usually means your TELEGRAM_BOT_TOKEN is invalid or the bot was deleted.');
           }
         });
+      }
     } else {
       console.log('⚠️ Bot not launched due to missing token.');
+    }
     }
   });
 }
