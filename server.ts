@@ -209,6 +209,21 @@ import { getRandomDevice } from './deviceManager.js';
 
 // ... (existing code)
 
+// Helper: Get Tokens from files
+import fs from 'fs';
+import path from 'path';
+
+function getTokens() {
+  try {
+    const accounts = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'accounts.json'), 'utf8'));
+    const newAccounts = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'new_bot_accounts.json'), 'utf8'));
+    return [...accounts, ...newAccounts];
+  } catch (e) {
+    console.error('Error reading token files:', e);
+    return [];
+  }
+}
+
 // Helper: Random Delay
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -336,7 +351,7 @@ async function runAutoLikes() {
         const result = await callLikeApi(data.uid, config.apiUrl);
         const daysLeft = Math.ceil((new Date(data.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
         
-        const logMsg = `[ <b>Ujjawal auto user success</b> ]\n\n📝 <b>API Response:</b>\n<pre>${result}</pre>\n\n[ 🆔 <b>UID:</b> <code>${data.uid}</code> ]\n\n⏳ <b>Days Left:</b> ${daysLeft}\n👤 <b>User:</b> ${data.name || data.tgId}\n\n━━━━━━━━━━━━━━━\n⚙️ <b>Config:</b>\n👑 Admin: @UjjawalXsarkar\n🆔 Admin UID: <code>${config.adminTgId}</code>\n\n✨ <b>Set by @UjjawalXsarkar</b>`;
+        const logMsg = `🤖 <b>AUTO-USER LIKE SUCCESS</b>\n━━━━━━━━━━━━━━━━━━━━\n🎮 <b>UID:</b> <code>${data.uid}</code>\n👤 <b>User:</b> ${data.name || data.tgId}\n\n📝 <b>API Response:</b>\n<pre>${result}</pre>\n\n⏳ <b>Days Left:</b> ${daysLeft}\n━━━━━━━━━━━━━━━━━━━━\n✨ <b>Powered by @UjjawalXsarkar</b>`;
         await logToChannel(logMsg);
         count++;
         
@@ -1204,16 +1219,18 @@ Invite your friends and earn points!
     const config = await getBotConfig();
     let result = '';
 
+    const statusMessage = await ctx.reply('⏳ <b>Processing your request...</b>\n\n<i>Connecting to server & initializing tokens...</i>', { parse_mode: 'HTML' });
+
     if (userData?.role === 'normal' && !isAdminUser) {
       if (userData.hasUsedFreeLike) {
         return ctx.reply('⚠️ <b>You have already used your free trial!</b>\n\n💳 Please buy Auto-User or VIP to continue.\nUse /buy to see plans.', { parse_mode: 'HTML' });
       }
       result = await callLikeApi(uid, config.apiUrl);
       await updateDoc(doc(db, 'users', tgId), { hasUsedFreeLike: true });
-      ctx.reply(`✅ <b>Free Trial Success!</b>\n\n📝 <b>Result:</b>\n<pre>${result}</pre>\n\nTo get more likes, please /buy premium!`, { parse_mode: 'HTML' });
+      await ctx.telegram.editMessageText(ctx.chat.id, statusMessage.message_id, undefined, `✅ <b>Free Trial Success!</b>\n\n🎮 <b>UID:</b> <code>${uid}</code>\n📝 <b>Result:</b>\n<pre>${result}</pre>\n\n✨ <i>To get more likes, upgrade to Premium!</i>`, { parse_mode: 'HTML' });
     } else {
       result = await callLikeApi(uid, config.apiUrl);
-      ctx.reply(`✅ <b>Like Success!</b>\n\n📝 <b>Result:</b>\n<pre>${result}</pre>`, { parse_mode: 'HTML' });
+      await ctx.telegram.editMessageText(ctx.chat.id, statusMessage.message_id, undefined, `💎 <b>Like Processed Successfully!</b>\n\n🎮 <b>UID:</b> <code>${uid}</code>\n📝 <b>Result:</b>\n<pre>${result}</pre>\n\n🚀 <b>Status:</b> Success`, { parse_mode: 'HTML' });
     }
 
     // Save History
