@@ -1762,7 +1762,6 @@ async function startServer() {
     } else {
       console.log('⚠️ Bot not launched due to missing token.');
     }
-    }
   });
 }
 
