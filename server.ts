@@ -248,56 +248,61 @@ async function callLikeApi(uid: string, apiUrlTemplate: string) {
   // Random Delay (2-10 seconds)
   await delay(Math.floor(Math.random() * 8000) + 2000);
 
-  const url = apiUrlTemplate.replace('{UID}', uid).replace('{TOKEN}', token);
+  // Strategy: Try Command API first (Priority 1), then Admin Dashboard API (Priority 2), then fallback to hardcoded default
+  const apisToTry = [config.cmdApiUrl, config.apiUrl, 'https://like-ind-api004.vercel.app/like'];
   
-  try {
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': device.userAgent,
-        'Accept': 'application/json',
-        'X-Device-Model': device.model,
-        'X-Android-Version': device.androidVersion
-      }
-    });
-    const data = response.data;
+  let response;
+  let usedUrl = '';
+  let errorMsg = '';
+  let apiType = '';
+
+  for (const urlTemplate of apisToTry) {
+    if (!urlTemplate) continue;
+    usedUrl = urlTemplate.replace('{UID}', uid).replace('{TOKEN}', token);
     
-    // Increment usage count
-    await updateDoc(doc(db, 'config', 'main'), {
-      dailyUsage: (dailyUsage + 1)
-    });
+    if (urlTemplate === config.cmdApiUrl) apiType = 'Command API (Priority 1)';
+    else if (urlTemplate === config.apiUrl) apiType = 'Dashboard API (Priority 2)';
+    else apiType = 'Default API';
 
-    const remainingQuota = dailyLimit - (dailyUsage + 1);
-    const eventId = Math.random().toString(36).substr(2, 9).toUpperCase();
-    const nextSyncTime = new Date(Date.now() + 3600000).toISOString().replace('T', ' ').substr(0, 19);
-
-    const devMessage = `
-\`\`\`text
-┌──────────────────────────────────────────┐
-│ 🚀 AUTO-LIKE DISPATCH :: ELITE           │
-└──────────────────────────────────────────┘
-
-[TRANSACTION_STATUS]
-> STATUS:    \`SUCCESS\`
-> UID:       \`${uid}\`
-> DELIVERED: \`100 LIKES\`
-
-[PERFORMANCE_METRICS]
-> LATENCY:   \`${Math.floor(Math.random() * 50) + 100}ms\`
-> SERVER:    \`IND-PRIME-01\`
-
-[QUOTA_METRICS]
-> REMAINING: \`${remainingQuota}/500\`
-> NEXT_SYNC: \`${nextSyncTime} UTC\`
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[ULTRA_PRO_MAX_PREMIUM_ACTIVE]
-\`\`\`
-`;
-    return devMessage;
-  } catch (error: any) {
-    console.error('API Error:', error.message);
-    return `❌ API Error: Connection failed (${error.message}) ⚠️`;
+    try {
+      response = await axios.get(usedUrl, {
+        headers: {
+          'User-Agent': device.userAgent,
+          'Accept': 'application/json',
+          'X-Device-Model': device.model,
+          'X-Android-Version': device.androidVersion
+        },
+        timeout: 10000
+      });
+      break; // Success!
+    } catch (e: any) {
+      errorMsg = e.message;
+      console.error(`Error calling API ${usedUrl}: ${e.message}`);
+      // Continue to next API
+    }
   }
+
+  if (!response) {
+    return `❌ <b>API Error:</b> All services failed.\n\n⚠️ <b>Last Error:</b> ${errorMsg}`;
+  }
+
+  const data = response.data;
+  
+  // Increment usage count
+  await updateDoc(doc(db, 'config', 'main'), {
+    dailyUsage: (dailyUsage + 1)
+  });
+
+  const remainingQuota = dailyLimit - (dailyUsage + 1);
+  
+  // Beautiful output formatting
+  return `✅ <b>Like Success!</b> 🚀
+━━━━━━━━━━━━━━━━━━━━
+🎮 <b>UID:</b> <code>${uid}</code>
+✨ <b>Result:</b> <code>${JSON.stringify(data).substring(0, 50)}...</code>
+📌 <b>API Used:</b> ${apiType}
+━━━━━━━━━━━━━━━━━━━━
+🚀 <b>Remaining Quota:</b> <code>${remainingQuota}/${dailyLimit}</code>`;
 }
 
 let bot: Telegraf | null = null;
@@ -1319,8 +1324,8 @@ Invite your friends and earn points!
     if (args.length < 2) return ctx.reply('❌ <b>Usage:</b> /newAPI [URL_WITH_{UID}]', { parse_mode: 'HTML' });
     
     const newUrl = args[1];
-    await setDoc(doc(db, 'config', 'main'), { apiUrl: newUrl }, { merge: true });
-    ctx.reply('✅ <b>API URL Updated successfully!</b>', { parse_mode: 'HTML' });
+    await setDoc(doc(db, 'config', 'main'), { cmdApiUrl: newUrl }, { merge: true });
+    ctx.reply('✅ <b>Command API URL (Priority 1) Updated successfully!</b>', { parse_mode: 'HTML' });
   });
 
   bot.action('server_status', (ctx) => {
