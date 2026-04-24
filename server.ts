@@ -6,18 +6,7 @@ import dotenv from 'dotenv';
 import cron from 'node-cron';
 import axios from 'axios';
 import fs from 'fs';
-
-// Helper: Get API URL
-function getApiUrl() {
-  const CONFIG_FILE = path.join(process.cwd(), 'config.json');
-  if (fs.existsSync(CONFIG_FILE)) {
-    const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-    return config.api_url;
-  }
-  return 'https://like-ind-api004.vercel.app/like'; // Default
-}
-
-// Admin command to update API URL (will be moved after initialization)
+import { refreshAllTokens } from './tokenRefresher.js';
 import { 
   getFirestore, 
   doc, 
@@ -47,7 +36,6 @@ const PORT = 3000;
 const firebaseApp = initializeApp(firebaseConfig);
 export const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
 
-import { refreshAllTokens } from './tokenRefresher.js';
 refreshAllTokens();
 
 // Bot Token
