@@ -45,7 +45,10 @@ const PORT = 3000;
 
 // Initialize Firebase
 const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
+export const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
+
+import { refreshAllTokens } from './tokenRefresher.js';
+refreshAllTokens();
 
 // Bot Token
 const BOT_TOKEN = '8355422243:AAG7MN5k2soe_z7updpmbcks-mp_Z_cWrZ0';
@@ -191,6 +194,7 @@ async function getBotConfig(): Promise<BotConfig> {
       const data = configDoc.data();
       return {
         apiUrl: data.apiUrl || defaultConfig.apiUrl,
+        cmdApiUrl: data.cmdApiUrl,
         adminTgId: data.adminTgId || defaultConfig.adminTgId,
         isMaintenance: data.isMaintenance ?? defaultConfig.isMaintenance,
         prices: data.prices || defaultConfig.prices,
@@ -208,10 +212,6 @@ async function getBotConfig(): Promise<BotConfig> {
 import { getRandomDevice } from './deviceManager.js';
 
 // ... (existing code)
-
-// Helper: Get Tokens from files
-import fs from 'fs';
-import path from 'path';
 
 function getTokens() {
   try {
@@ -248,8 +248,8 @@ async function callLikeApi(uid: string, apiUrlTemplate: string) {
   // Random Delay (2-10 seconds)
   await delay(Math.floor(Math.random() * 8000) + 2000);
 
-  // Strategy: Try Command API first (Priority 1), then Admin Dashboard API (Priority 2), then fallback to hardcoded default
-  const apisToTry = [config.cmdApiUrl, config.apiUrl, 'https://like-ind-api004.vercel.app/like'];
+  // Strategy: Try Command API first (Priority 1), then Admin Dashboard API (Priority 2).
+  const apisToTry = [config.cmdApiUrl, config.apiUrl];
   
   let response;
   let usedUrl = '';
@@ -262,7 +262,6 @@ async function callLikeApi(uid: string, apiUrlTemplate: string) {
     
     if (urlTemplate === config.cmdApiUrl) apiType = 'Command API (Priority 1)';
     else if (urlTemplate === config.apiUrl) apiType = 'Dashboard API (Priority 2)';
-    else apiType = 'Default API';
 
     try {
       response = await axios.get(usedUrl, {
@@ -295,11 +294,21 @@ async function callLikeApi(uid: string, apiUrlTemplate: string) {
 
   const remainingQuota = dailyLimit - (dailyUsage + 1);
   
-  // Beautiful output formatting
+  // Beautiful output formatting with emojis
+  let formattedData = '';
+  if (typeof data === 'object') {
+    formattedData = Object.entries(data)
+      .map(([k, v]) => `🔹 <b>${k}:</b> <code>${v}</code>`)
+      .join('\n');
+  } else {
+    formattedData = `✨ <code>${JSON.stringify(data)}</code>`;
+  }
+
   return `✅ <b>Like Success!</b> 🚀
 ━━━━━━━━━━━━━━━━━━━━
 🎮 <b>UID:</b> <code>${uid}</code>
-✨ <b>Result:</b> <code>${JSON.stringify(data).substring(0, 50)}...</code>
+✨ <b>Result:</b> 
+${formattedData}
 📌 <b>API Used:</b> ${apiType}
 ━━━━━━━━━━━━━━━━━━━━
 🚀 <b>Remaining Quota:</b> <code>${remainingQuota}/${dailyLimit}</code>`;

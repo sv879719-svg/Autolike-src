@@ -68,9 +68,9 @@ service cloud.firestore {
       allow read, write: if true; // Bot can manage redeem codes
     }
 
-    match /config/main {
-      allow read: if true; // Bot needs to read config
-      allow write: if true; // Allow bot (server) to update config
+    match /config/{document=**} {
+      allow read: if true;
+      allow write: if true;
     }
 
     match /logs/{logId} {
