@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import cron from 'node-cron';
 import axios from 'axios';
 import fs from 'fs';
-import { refreshAllTokens } from './tokenRefresher';
+import { refreshAllTokens } from './tokenRefresher.js';
 import { 
   getFirestore, 
   doc, 
@@ -23,12 +23,21 @@ import {
   arrayUnion
 } from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
-import { db } from './firebaseInit';
+import { db } from './firebaseInit.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
+
+app.use((req, res, next) => {
+  const password = req.query.password;
+  if (password === '12345') {
+    next();
+  } else {
+    res.status(401).send('Enter password in URL: ?password=12345');
+  }
+});
 
 refreshAllTokens();
 
@@ -191,7 +200,7 @@ async function getBotConfig(): Promise<BotConfig> {
   return defaultConfig;
 }
 
-import { getRandomDevice } from './deviceManager';
+import { getRandomDevice } from './deviceManager.js';
 
 // ... (existing code)
 
