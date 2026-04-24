@@ -1,6 +1,6 @@
 // tokenRefresher.ts
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
-import { db } from './server.js'; // Assuming db is exported from server.ts
+import { db } from './firebaseInit';
 import axios from 'axios';
 import cron from 'node-cron';
 

@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import cron from 'node-cron';
 import axios from 'axios';
 import fs from 'fs';
-import { refreshAllTokens } from './tokenRefresher.js';
+import { refreshAllTokens } from './tokenRefresher';
 import { 
   getFirestore, 
   doc, 
@@ -23,18 +23,12 @@ import {
   arrayUnion
 } from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
+import { db } from './firebaseInit';
 
 dotenv.config();
 
-// Load Firebase Config safely for ESM
-const firebaseConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'firebase-applet-config.json'), 'utf8'));
-
 const app = express();
 const PORT = 3000;
-
-// Initialize Firebase
-const firebaseApp = initializeApp(firebaseConfig);
-export const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
 
 refreshAllTokens();
 
@@ -197,7 +191,7 @@ async function getBotConfig(): Promise<BotConfig> {
   return defaultConfig;
 }
 
-import { getRandomDevice } from './deviceManager.js';
+import { getRandomDevice } from './deviceManager';
 
 // ... (existing code)
 
