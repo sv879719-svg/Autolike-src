@@ -30,15 +30,6 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
-app.use((req, res, next) => {
-  const password = req.query.password;
-  if (password === '12345') {
-    next();
-  } else {
-    res.status(401).send('Enter password in URL: ?password=12345');
-  }
-});
-
 refreshAllTokens();
 
 // Bot Token
