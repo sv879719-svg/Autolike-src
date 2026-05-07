@@ -281,6 +281,26 @@ export default function App() {
                   value={users.filter(u => u.role === 'autouser').length} 
                   color="cyan" 
                 />
+                {users.filter(u => u.role === 'autouser').length > 0 && (
+                  <button 
+                    onClick={async () => {
+                      if (confirm('Are you sure you want to delete ALL auto-users? This action is permanent.')) {
+                        try {
+                          const autoUsers = users.filter(u => u.role === 'autouser');
+                          for (const u of autoUsers) {
+                            await deleteDoc(doc(db, 'users', u.id));
+                          }
+                          alert('All auto-users deleted successfully!');
+                        } catch (e) {
+                          alert('Error deleting auto-users');
+                        }
+                      }
+                    }}
+                    className="w-full mt-2 py-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-all text-sm font-medium"
+                  >
+                    Delete All Auto-Users
+                  </button>
+                )}
                 <StatCard 
                   icon={Shield} 
                   label="VIP Users" 

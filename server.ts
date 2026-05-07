@@ -6,13 +6,14 @@ import dotenv from 'dotenv';
 import cron from 'node-cron';
 import axios from 'axios';
 import fs from 'fs';
-import { refreshAllTokens } from './tokenRefresher.js';
+import { refreshAllTokens } from './tokenRefresher';
 import { 
   getFirestore, 
   doc, 
   getDoc, 
   setDoc, 
   updateDoc, 
+  deleteDoc,
   collection, 
   query, 
   where, 
@@ -23,102 +24,28 @@ import {
   arrayUnion
 } from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
-import { db } from './firebaseInit.js';
+import { db } from './firebaseInit';
 
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
 
+// PLACEHOLDER: Replace 0 with your actual Telegram Admin ID
+const ADMIN_ID = 7478142151; 
+
+function getApiUrl(uid: string) {
+  // Replace with actual logic
+  return `https://api.vk-boy.com/v1/like?uid=${uid}`;
+}
+
 refreshAllTokens();
 
 // Bot Token
-const BOT_TOKEN = '8355422243:AAG7MN5k2soe_z7updpmbcks-mp_Z_cWrZ0';
+const BOT_TOKEN = '8589598194:AAEx6fvl-tG7MPAvv4Ew9fEkkdf1-IDKYpk';
 const CHANNEL_ID = '-1003505605439';
 
-// New Bot Token
-const BOT_TOKEN_2 = '8678990817:AAHA31B1Zug6bGnoXUAIcH-rCgWNNOL_3pk';
-const bot2 = new Telegraf(BOT_TOKEN_2);
-
-// Admin command to update API URL
-bot2.command('setapi', (ctx) => {
-  if (ctx.from?.id !== ADMIN_ID) return ctx.reply('❌ Access Denied.');
-  const newUrl = ctx.message.text.split(' ')[1];
-  if (!newUrl) return ctx.reply('Usage: /setapi <NEW_URL>');
-  
-  const config = { api_url: newUrl };
-  fs.writeFileSync(path.join(process.cwd(), 'config.json'), JSON.stringify(config, null, 2));
-  ctx.reply(`✅ API URL updated permanently to:\n${newUrl}`);
-});
-
-// New Bot Logic (Elite)
-bot2.command('like', async (ctx) => {
-  console.log('📩 bot2 received /like command');
-  const uid = ctx.message.text.split(' ')[1];
-  if (!uid) return ctx.reply('Please provide UID: /like <UID>');
-  console.log('Processing UID:', uid);
-
-  // Send initial processing message
-  const statusMsg = await ctx.reply('⏳ <b>Processing your request...</b>', { parse_mode: 'HTML' });
-
-  // Get dynamic token
-  const tokens = getTokens();
-  const tokenEntry = tokens.find((t: any) => t.uid === uid) || tokens[Math.floor(Math.random() * tokens.length)];
-  const token = tokenEntry ? tokenEntry.token : '';
-  
-  // Random Delay (2-10 seconds)
-  await new Promise(res => setTimeout(res, Math.floor(Math.random() * 8000) + 2000));
-
-  // Update status
-  await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, '⏳ <b>Connecting to server...</b>', { parse_mode: 'HTML' });
-
-  const url = getApiUrl(uid);
-  
-  try {
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Mobile Safari/537.36',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'Referer': 'https://vk-boy-acc-v1.vercel.app/',
-        'Origin': 'https://vk-boy-acc-v1.vercel.app/',
-        'Accept-Language': 'en-US,en;q=0.9'
-      }
-    });
-    
-    const nextSyncTime = new Date(Date.now() + 3600000).toISOString().replace('T', ' ').substr(0, 19);
-
-    const devMessage = `
-\`\`\`text
-┌──────────────────────────────────────────┐
-│ 🚀 AUTO-LIKE DISPATCH :: ELITE           │
-└──────────────────────────────────────────┘
-
-[TRANSACTION_STATUS]
-> STATUS:    \`SUCCESS\`
-> UID:       \`${uid}\`
-> DELIVERED: \`100 LIKES\`
-
-[PERFORMANCE_METRICS]
-> LATENCY:   \`${Math.floor(Math.random() * 50) + 100}ms\`
-> SERVER:    \`IND-PRIME-01\`
-
-[QUOTA_METRICS]
-> REMAINING: \`N/A\`
-> NEXT_SYNC: \`${nextSyncTime} UTC\`
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[ULTRA_PRO_MAX_PREMIUM_ACTIVE]
-\`\`\`
-`;
-    await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, devMessage, { parse_mode: 'MarkdownV2' });
-  } catch (error: any) {
-    console.error('API Error Details:', error.response?.data || error.message);
-    await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, `❌ API Error: Connection failed (${error.response?.data ? JSON.stringify(error.response.data) : error.message}) ⚠️`, { parse_mode: 'HTML' });
-  }
-});
-
-bot2.launch();
+refreshAllTokens();
 
 // Types
 interface UserData {
@@ -143,6 +70,7 @@ interface UserData {
 
 interface BotConfig {
   apiUrl: string;
+  cmdApiUrl?: string; // Add this
   adminTgId: string;
   isMaintenance?: boolean;
   prices?: { [key: string]: number };
@@ -191,7 +119,7 @@ async function getBotConfig(): Promise<BotConfig> {
   return defaultConfig;
 }
 
-import { getRandomDevice } from './deviceManager.js';
+import { getRandomDevice } from './deviceManager';
 
 // ... (existing code)
 
@@ -403,7 +331,116 @@ if (bot) {
     console.error(`Ooops, encountered an error for ${ctx.updateType}`, err);
   });
 
-  // Force Join Check Function
+  bot.help(async (ctx) => {
+    const isAdmin = ctx.from?.id === ADMIN_ID;
+    const helpMsg = `
+┌──────────────────────────┐
+│        HELP MENU         │
+└──────────────────────────┘
+/like <UID>       - Process auto-like
+/help             - Show this menu
+${isAdmin ? '/setapi <URL> - Set API URL (Admin)\n/delallautousers - Delete all users (Admin)\n/list - View Premium Users (Admin)' : ''}
+    `;
+    ctx.reply(helpMsg, { parse_mode: 'HTML' });
+  });
+
+  bot.command('setapi', (ctx) => {
+    if (ctx.from?.id !== ADMIN_ID) return ctx.reply('❌ Access Denied.');
+    const newUrl = ctx.message.text.split(' ')[1];
+    if (!newUrl) return ctx.reply('Usage: /setapi <NEW_URL>');
+    
+    const config = { api_url: newUrl };
+    fs.writeFileSync(path.join(process.cwd(), 'config.json'), JSON.stringify(config, null, 2));
+    ctx.reply(`✅ API URL updated permanently to:\n${newUrl}`);
+  });
+
+  bot.command('delallautousers', async (ctx) => {
+    if (ctx.from?.id !== ADMIN_ID) return ctx.reply('❌ Access Denied.');
+    
+    const statusMsg = await ctx.reply('⏳ <b>Deleting all auto-users...</b>', { parse_mode: 'HTML' });
+    try {
+        const usersCol = collection(db, 'users');
+        const q = query(usersCol, where('role', '==', 'autouser'));
+        const snapshot = await getDocs(q);
+        
+        for (const document of snapshot.docs) {
+          await deleteDoc(doc(db, 'users', document.id));
+        }
+        
+        ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, `✅ <b>Success: Deleted ${snapshot.size} auto-users!</b>`, { parse_mode: 'HTML' });
+    } catch (e) {
+        console.error(e);
+        ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, '❌ <b>Error: Failed to delete auto-users.</b>', { parse_mode: 'HTML' });
+    }
+  });
+
+  bot.command('like', async (ctx) => {
+    const uid = ctx.message.text.split(' ')[1];
+    if (!uid) return ctx.reply('❌ <b>Usage:</b> <code>/like <UID></code>\n\nExample: <code>/like 12345678</code>', { parse_mode: 'HTML' });
+    
+    // Send initial processing message
+    const statusMsg = await ctx.reply('⏳ <b>Processing your request in background...</b>', { parse_mode: 'HTML' });
+    
+    // DO NOT AWAIT the rest of this
+    (async () => {
+      try {
+        // Get dynamic token
+        const tokens = getTokens();
+        const tokenEntry = tokens.find((t: any) => t.uid === uid) || tokens[Math.floor(Math.random() * tokens.length)];
+        const token = tokenEntry ? tokenEntry.token : '';
+        
+        // Random Delay (2-10 seconds)
+        await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, '⏳ <b>Initiating random delay...</b>', { parse_mode: 'HTML' });
+        await new Promise(res => setTimeout(res, Math.floor(Math.random() * 8000) + 2000));
+      
+        // Update status
+        await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, '⏳ <b>Connecting to server...</b>', { parse_mode: 'HTML' });
+      
+        const url = getApiUrl(uid);
+        
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Mobile Safari/537.36',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'Referer': 'https://vk-boy-acc-v1.vercel.app/',
+            'Origin': 'https://vk-boy-acc-v1.vercel.app/',
+            'Accept-Language': 'en-US,en;q=0.9'
+          }
+        });
+        
+        const nextSyncTime = new Date(Date.now() + 3600000).toISOString().replace('T', ' ').substr(0, 19);
+    
+        const devMessage = `
+    \`\`\`text
+    ┌──────────────────────────┐
+    │  RS AUTO LIKE SUCCESS    │
+    └──────────────────────────┘
+    
+    [TRANSACTION_STATUS]
+    > STATUS:    \`SUCCESS\`
+    > UID:       \`${uid}\`
+    > DELIVERED: \`100 LIKES\`
+    
+    [PERFORMANCE_METRICS]
+    > LATENCY:   \`${Math.floor(Math.random() * 50) + 100}ms\`
+    > SERVER:    \`IND-PRIME-01\`
+    
+    [QUOTA_METRICS]
+    > REMAINING: \`N/A\`
+    > NEXT_SYNC: \`${nextSyncTime} UTC\`
+    
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    [ULTRA_PRO_MAX_PREMIUM_ACTIVE]
+    \`\`\`
+    `;
+        await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, devMessage, { parse_mode: 'MarkdownV2' });
+      } catch (error: any) {
+        console.error('API Error Details:', error.response?.data || error.message);
+        await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, `❌ API Error: Connection failed (${error.response?.data ? JSON.stringify(error.response.data) : error.message}) ⚠️`, { parse_mode: 'HTML' });
+      }
+    })();
+  });
   const checkJoin = async (ctx: Context, tgId: string) => {
     // Bypass for Admin
     if (tgId === '7478142151') return true;
@@ -1659,8 +1696,8 @@ cron.schedule('30 18 * * *', async () => {
   }
 });
 
-// Daily Cron at 5 AM IST (11:30 PM UTC)
-cron.schedule('30 23 * * *', async () => {
+// Daily Cron at 5 AM Local Time
+cron.schedule('0 5 * * *', async () => {
   console.log('🚀 Running daily auto-likes (5:00 AM IST)...');
   try {
     const count = await runAutoLikes();
@@ -1760,17 +1797,21 @@ async function startServer() {
         console.log('✅ Bot running in Webhook mode!');
       } else {
         // Fallback to polling but with strong drop_pending_updates
-        bot.telegram.deleteWebhook({ drop_pending_updates: true }).then(() => {
-          bot.launch({
+        bot.telegram.deleteWebhook({ drop_pending_updates: true })
+          .then(() => bot.launch({
             allowedUpdates: ['message', 'callback_query'],
+          }))
+          .then(() => console.log('✅ Bot running in Polling mode!'))
+          .catch((err) => {
+            if (err.response && err.response.error_code === 409) {
+              console.warn('⚠️ Bot already running or 409 conflict. Ignoring further launch attempts.');
+            } else {
+              console.error('❌ Failed to launch bot:', err);
+              if (err.message && err.message.includes('404')) {
+                console.error('👉 This usually means your TELEGRAM_BOT_TOKEN is invalid or the bot was deleted.');
+              }
+            }
           });
-          console.log('✅ Bot running in Polling mode!');
-        }).catch((err) => {
-          console.error('❌ Failed to launch bot:', err.message);
-          if (err.message.includes('404')) {
-            console.error('👉 This usually means your TELEGRAM_BOT_TOKEN is invalid or the bot was deleted.');
-          }
-        });
       }
     } else {
       console.log('⚠️ Bot not launched due to missing token.');
